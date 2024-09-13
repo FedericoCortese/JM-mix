@@ -38,7 +38,7 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
                        max_iter=10, n_init=10, tol=NULL, verbose=FALSE
                      
 ) {
-  # Fit jump model for muxed type data 
+  # Fit jump model for mixed type data 
   
   # Arguments:
   # Y: data.frame with mixed data types. Categorical variables must be factors.
@@ -71,7 +71,7 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
   Ycont=Y[,-cat.indx]
   Ycat=Y[,cat.indx]
   
-  n_levs=apply(Ycat, 2, function(x)length(unique(x)))
+  n_levs=apply(Ycat, 2, function(x)length(unique(x[!is.na(x)])))
   # n_levs=apply(Ycat, 2, function(x)levels(x))
   
   
@@ -187,6 +187,8 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
     s=initialize_states(Y,n_states)
   }
   
+  #Y[,cat.indx]=apply(Y[,cat.indx],2,droplevels)
+  
   return(list(best_s=best_s,
               Y=Y,
               Y.orig=Ytil,
@@ -224,7 +226,7 @@ sim_data_mixed=function(seed=123,
   # SimData.NA: matrix of simulated data with missing values
   # SimData: matrix of simulated data wihtout missing values
   # mchain: latent Markov chain
-  
+  MU=mu
   mu=c(-mu,0,mu)
   
   if(is.null(Pcat)){
@@ -263,7 +265,7 @@ sim_data_mixed=function(seed=123,
   }
   
   if(Pcat!=0){
-    SimData[,1:Pcat]=apply(SimData[,1:Pcat],2,get_cat,mc=x,mu=mu,phi=phi)
+    SimData[,1:Pcat]=apply(SimData[,1:Pcat],2,get_cat,mc=x,mu=MU,phi=phi)
     SimData=as.data.frame(SimData)
     SimData[,1:Pcat]=SimData[,1:Pcat]%>%mutate_all(as.factor)
   }

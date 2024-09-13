@@ -2,7 +2,8 @@ source("Utils_JMmix.R")
 
 # Simulate mixed data with 10% continuous missing values
 TT=1000
-P=30
+P=30 
+Pcat=15
 Ktrue=3
 mu=2
 phi=.8
@@ -14,6 +15,7 @@ typeNA=1 # 0 for random missing, 1 for continuous missing
 Y=sim_data_mixed(seed=1,
          TT=TT,
          P=P,
+         Pcat=Pcat,
          Ktrue=Ktrue,
          mu=mu,
          phi=phi,
@@ -35,5 +37,4 @@ est=jump_mixed(Y$SimData.NA,
 adj.rand.index(Y$mchain,est$best_s)
 
 # Imputation error
-
-gower.dist(Y$SimData.complete,est$Y)
+mean(gower.dist(Y$SimData.complete,est$Y))
