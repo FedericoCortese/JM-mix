@@ -8,4 +8,4 @@ This file contains utility functions for JM-mix model estimation.
 
 ## example.R
 
-This file includes a basic example demonstrating how to use the JM-mix model.
+This file includes a basic example demonstrating how to estimate the JM-mix model.
