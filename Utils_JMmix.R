@@ -1,7 +1,15 @@
-library(dplyr)
-library(cluster)
-library(StatMatch)
-library(pdfCluster)
+# List of required packages
+required_packages <- c("dplyr", "cluster", "StatMatch", "pdfCluster")
+
+# Check if packages are installed; install if missing
+missing_packages <- required_packages[!required_packages %in% installed.packages()[,"Package"]]
+if(length(missing_packages)) {
+  install.packages(missing_packages)
+}
+# Load the packages
+lapply(required_packages, library, character.only = TRUE)
+rm(required_packages, missing_packages)
+
 
 initialize_states <- function(Y, K) {
   
@@ -35,7 +43,8 @@ initialize_states <- function(Y, K) {
 
 jump_mixed <- function(Y, n_states, jump_penalty=1e-5, 
                        initial_states=NULL,
-                       max_iter=10, n_init=10, tol=NULL, verbose=FALSE
+                       max_iter=10, n_init=10, tol=NULL, verbose=FALSE,
+                       time_vec=NULL
                      
 ) {
   # Fit jump model for mixed type data 
@@ -49,12 +58,27 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
   # n_init: number of initializations
   # tol: tolerance for convergence
   # verbose: print progress
+  # time_vec is a vector of time points, needed if times are not equally sampled
   
   # Value:
   # best_s: estimated state sequence
   # Y: imputed data
   # Y.orig: original data
   # condMM: state-conditional means and modes
+  
+  timeflag=FALSE
+  if(!is.null(time_vec)){
+    timeflag=TRUE
+      if(length(time_vec)!=nrow(Y)){
+        stop("time_vec must have the same length of the number of observations")
+      }
+      else{
+        time=sort(unique(time_vec))
+        dtime=diff(time)
+        dtime=dtime/as.numeric(min(dtime))
+        dtime=as.numeric(dtime)
+      }
+  }
   
   n_states=as.integer(n_states)
   
@@ -154,7 +178,12 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
       
       V <- loss_by_state
       for (t in (n_obs-1):1) {
+        if(timeflag){
+          V[t-1,] <- loss_by_state[t-1,] + apply(V[t,]/dtime[t] + Gamma, 2, min)
+        }
+        else{
         V[t-1,] <- loss_by_state[t-1,] + apply(V[t,] + Gamma, 2, min)
+        }
       }
       
       s[1] <- which.min(V[1,])
