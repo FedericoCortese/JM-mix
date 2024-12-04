@@ -24,6 +24,8 @@ Y=sim_data_mixed(seed=1,
          pNAs=pNAs,
          typeNA=typeNA)
 
+str(Y)
+
 # Estimation
 lambda=.16
 
@@ -57,8 +59,6 @@ time_gap=sort(sample(1:dim(Y_gap)[1],size=round(.9*dim(Y_gap)[1])))
 Y_gap=Y_gap[-time_gap,]
 time_vec=1:dim(Y_gap_sim$SimData.NA)[1]
 time_vec=time_vec[-time_gap]
-
-lambda=0.08
 
 est_gap=jump_mixed(Y_gap,
                    n_states=Ktrue,

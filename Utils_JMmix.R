@@ -89,7 +89,7 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
   best_s <- NULL
   
   # Which vars are categorical and which are numeric
-  cat_flag=sum(apply(Y,2,is.factor))!=0
+  cat_flag=any(sapply(Y, is.factor))
   
   if(cat_flag){
     cat.indx=which(sapply(Y, is.factor))
