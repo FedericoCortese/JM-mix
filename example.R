@@ -58,6 +58,8 @@ Y_gap=Y_gap[-time_gap,]
 time_vec=1:dim(Y_gap_sim$SimData.NA)[1]
 time_vec=time_vec[-time_gap]
 
+lambda=0.08
+
 est_gap=jump_mixed(Y_gap,
                    n_states=Ktrue,
                    jump_penalty = lambda,

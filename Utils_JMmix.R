@@ -89,43 +89,55 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
   best_s <- NULL
   
   # Which vars are categorical and which are numeric
+  cat_flag=sum(apply(Y,2,is.factor))!=0
   
-  cat.indx=which(sapply(Y, is.factor))
-  cont.indx=which(sapply(Y, is.numeric))
-  Ycont=Y[,-cat.indx]
-  Ycat=Y[,cat.indx]
+  if(cat_flag){
+    cat.indx=which(sapply(Y, is.factor))
+    cont.indx=which(sapply(Y, is.numeric))
+    Ycont=Y[,-cat.indx]
+    Ycat=Y[,cat.indx]
+    
+    n_levs=apply(Ycat, 2, function(x)length(unique(x[!is.na(x)])))
+    # n_levs=apply(Ycat, 2, function(x)levels(x))
+    
+    
+    n_cat=length(cat.indx)
+    n_cont=n_features-n_cat
+    # Initialize modes
+    mo <- apply(Ycat,2,Mode)
+    
+    Mcat=ifelse(is.na(Ycat),T,F)
+    
+  }
+  else{
+    Ycont=Y
+    n_cont=dim(Y)[2]
+    n_cat=0
+  }
   
-  n_levs=apply(Ycat, 2, function(x)length(unique(x[!is.na(x)])))
-  # n_levs=apply(Ycat, 2, function(x)levels(x))
-  
-  
-  n_cat=length(cat.indx)
-  n_cont=n_features-n_cat
   
   # Initialize mu 
   mu <- colMeans(Ycont,na.rm = T)
-  
-  # Initialize modes
-  mo <- apply(Ycat,2,Mode)
-  
-  # Track missings with 0 1 matrix
   Mcont=ifelse(is.na(Ycont),T,F)
-  Mcat=ifelse(is.na(Ycat),T,F)
-  
   Ytil=Y
+  
+  
+  
   # Impute missing values with mean of observed states
   for(i in 1:n_cont){
     Ycont[,i]=ifelse(Mcont[,i],mu[i],Ycont[,i])
   }
-  for(i in 1:n_cat){
-    Ycat[,i]=ifelse(Mcat[,i],mo[i],Ycat[,i])
-    Ycat[,i]=factor(Ycat[,i],levels=1:n_levs[i])
+  
+  if(cat_flag){
+    for(i in 1:n_cat){
+      Ycat[,i]=ifelse(Mcat[,i],mo[i],Ycat[,i])
+      Ycat[,i]=factor(Ycat[,i],levels=1:n_levs[i])
+    }
+    Y[,-cat.indx]=Ycont
+    Y[,cat.indx]=Ycat
   }
   
-  
-  Y[,-cat.indx]=Ycont
-  Y[,cat.indx]=Ycat
-  
+
   # State initialization through kmeans++
   if (!is.null(initial_states)) {
     s <- initial_states
@@ -134,21 +146,30 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
   }
   
   for (init in 1:n_init) {
-    mu <- matrix(0, nrow=n_states, ncol=n_features-length(cat.indx))
-    mo <- matrix(0, nrow=n_states, ncol=length(cat.indx))
+    mu <- matrix(0, nrow=n_states, ncol=n_features-n_cat)
+    
+    if(cat_flag){
+      mo <- matrix(0, nrow=n_states, ncol=length(cat.indx))
+    }
+
     loss_old <- 1e10
     for (it in 1:max_iter) {
       
       for (i in unique(s)) {
+        
         mu[i,] <- colMeans(Ycont[s==i,])
+        if(cat_flag){
         mo[i,]=apply(Ycat[s==i,],2,Mode)
+        }
         
       }
       
       mu=data.frame(mu)
-      mo=data.frame(mo,stringsAsFactors=TRUE)
-      for(i in 1:n_cat){
-        mo[,i]=factor(mo[,i],levels=1:n_levs[i])
+      if(cat_flag){
+        mo=data.frame(mo,stringsAsFactors=TRUE)
+        for(i in 1:n_cat){
+          mo[,i]=factor(mo[,i],levels=1:n_levs[i])
+        }
       }
       
       # Fit state sequence
@@ -158,17 +179,24 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
       for(i in 1:ncol(Ycont)){
         Ycont[,i]=ifelse(Mcont[,i],mu[s,i],Ycont[,i])
       }
-      for(i in 1:ncol(Ycat)){
-        Ycat[,i]=ifelse(Mcat[,i],mo[s,i],Ycat[,i])
-        Ycat[,i]=factor(Ycat[,i],levels=1:n_levs[i])
+      if(cat_flag){
+        for(i in 1:ncol(Ycat)){
+          Ycat[,i]=ifelse(Mcat[,i],mo[s,i],Ycat[,i])
+          Ycat[,i]=factor(Ycat[,i],levels=1:n_levs[i])
+        }
+        
+        Y[,-cat.indx]=Ycont
+        Y[,cat.indx]=Ycat
+        mumo=data.frame(matrix(0,nrow=n_states,ncol=n_features))
+        mumo[,cat.indx]=mo
+        mumo[,cont.indx]=mu
+      }
+      else{
+        Y=Ycont
+        mumo=mu
       }
       
-      Y[,-cat.indx]=Ycont
-      Y[,cat.indx]=Ycat
       
-      mumo=data.frame(matrix(0,nrow=n_states,ncol=n_features))
-      mumo[,cat.indx]=mo
-      mumo[,cont.indx]=mu
       
       
       
@@ -302,8 +330,10 @@ sim_data_mixed=function(seed=123,
   if(typeNA==0|typeNA==1){
     SimData.NA=apply(SimData,2,punct,pNAs=pNAs,type=typeNA)
     SimData.NA=as.data.frame(SimData.NA)
-    SimData.NA[,1:Pcat]=SimData.NA[,1:Pcat]%>%mutate_all(as.factor)
-    SimData.NA[,-(1:Pcat)]=SimData.NA[,-(1:Pcat)]%>%mutate_all(as.numeric)
+    if(Pcat!=0){
+      SimData.NA[,1:Pcat]=SimData.NA[,1:Pcat]%>%mutate_all(as.factor)
+      SimData.NA[,-(1:Pcat)]=SimData.NA[,-(1:Pcat)]%>%mutate_all(as.numeric)
+    }
   }
   else{
     SimData.NA=SimData
