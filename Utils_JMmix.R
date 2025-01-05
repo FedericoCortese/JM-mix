@@ -64,7 +64,7 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
   # best_s: estimated state sequence
   # Y: imputed data
   # Y.orig: original data
-  # condMM: state-conditional means and modes
+  # condMM: state-conditional medians and modes
   
   timeflag=FALSE
   if(!is.null(time_vec)){
@@ -117,13 +117,13 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
   
   
   # Initialize mu 
-  mu <- colMeans(Ycont,na.rm = T)
+  mu <- apply(Ycont, 2, median, na.rm = TRUE)
   Mcont=ifelse(is.na(Ycont),T,F)
   Ytil=Y
   
   
   
-  # Impute missing values with mean of observed states
+  # Impute missing values with medians of observed states
   for(i in 1:n_cont){
     Ycont[,i]=ifelse(Mcont[,i],mu[i],Ycont[,i])
   }
@@ -157,7 +157,7 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
       
       for (i in unique(s)) {
         
-        mu[i,] <- colMeans(Ycont[s==i,])
+        mu[i,] <- mu[i,] <- apply(Ycont[s==i,], 2, median, na.rm = TRUE)
         if(cat_flag){
         mo[i,]=apply(Ycat[s==i,],2,Mode)
         }
@@ -262,7 +262,7 @@ sim_data_mixed=function(seed=123,
                         Pcat=NULL,
                         pers=.95,
                         pNAs=0,
-                        typeNA=2){
+                        typeNA=3){
   
   # Function to simulate mixed data with fixed parameters for the data generating process
   
@@ -270,19 +270,18 @@ sim_data_mixed=function(seed=123,
   # seed: seed for the random number generator
   # TT: number of observations
   # P: number of features
-  # Ktrue: number of states (only 3 states are allowed TO BE UPDATED)
+  # Ktrue: number of states
   # mu: mean value for the continuous variables
   # phi: conditional probability for the categorical outcome k in state k
   # rho: correlation for the variables
   # Pcat: number of categorical variables
   # pers: self-transition probability
   # pNAs: percentage of missing values
-  # typeNA is the type of missing values (0 for random, 1 for continuous, all other values will turn into no missing imputation)
+  # typeNA is the type of missing values (0: MCAR, 1: MAR, 2: MNAR, all other values will turn into no missing imputation)
   
   # value:
-  # SimData.NA: matrix of simulated data with missing values
-  # SimData: matrix of simulated data wihtout missing values
-  # mchain: latent Markov chain
+  # SimData: matrix of simulated data
+  
   MU=mu
   mu=c(-mu,0,mu)
   
@@ -319,6 +318,7 @@ sim_data_mixed=function(seed=123,
   for (i in 1:TT) {
     k = x[i]
     SimData[i, ] = Sim[i, (P * k - P + 1):(P * k)]
+    #SimDataCat[i, ] = SimCat[i, (Pcat * k - Pcat + 1):(Pcat * k)]
   }
   
   if(Pcat!=0){
@@ -327,14 +327,25 @@ sim_data_mixed=function(seed=123,
     SimData[,1:Pcat]=SimData[,1:Pcat]%>%mutate_all(as.factor)
   }
   
-  if(typeNA==0|typeNA==1){
-    SimData.NA=apply(SimData,2,punct,pNAs=pNAs,type=typeNA)
-    SimData.NA=as.data.frame(SimData.NA)
-    if(Pcat!=0){
-      SimData.NA[,1:Pcat]=SimData.NA[,1:Pcat]%>%mutate_all(as.factor)
-      SimData.NA[,-(1:Pcat)]=SimData.NA[,-(1:Pcat)]%>%mutate_all(as.numeric)
-    }
+  if(typeNA==0){
+    SimData.NA=delete_MCAR(SimData, p = pNAs)
   }
+  
+  else if(typeNA==1){
+    vect <- 1:ncol(SimData)
+    col_mis <- vect[vect %% 2 != 0]
+    cols_ctrl <- vect[vect %% 2 == 0]
+    SimData.NA=delete_MAR_censoring(SimData, 
+                                    p = 2 * pNAs, 
+                                    cols_mis = col_mis, 
+                                    cols_ctrl = cols_ctrl)
+  }
+  
+  else if(typeNA==2){
+    vect <- 1:ncol(SimData)  
+    SimData.NA=delete_MNAR_censoring(SimData, p = 0.2, cols_mis = 1:ncol(SimData))
+  }
+  
   else{
     SimData.NA=SimData
   }

@@ -10,7 +10,7 @@ phi=.8 # Conditional probability for the categorical outcome k in state k
 rho=0 # Correlation
 pers=.9 # Persistence
 pNAs=.1 # Percentage of missing values
-typeNA=1 # 0 for random missing, 1 for continuous missing
+typeNA=1 # 0: MCAR, 1: MAR, 2: MNAR, all other values will turn into no missing imputation
 
 Y=sim_data_mixed(seed=1,
          TT=TT,
@@ -37,9 +37,6 @@ est=jump_mixed(Y$SimData.NA,
 
 # Classification accuracy
 adj.rand.index(Y$mchain,est$best_s)
-
-# Imputation error
-mean(gower.dist(Y$SimData.complete,est$Y))
 
 
 # Data with temporal gaps
