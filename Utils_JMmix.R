@@ -1,5 +1,5 @@
 # List of required packages
-required_packages <- c("dplyr", "cluster", "StatMatch", "pdfCluster")
+required_packages <- c("dplyr", "cluster", "StatMatch", "pdfCluster","missMethods")
 
 # Check if packages are installed; install if missing
 missing_packages <- required_packages[!required_packages %in% installed.packages()[,"Package"]]
@@ -155,13 +155,29 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
     loss_old <- 1e10
     for (it in 1:max_iter) {
       
+      # for (i in unique(s)) {
+      #   
+      #   mu[i,] <- apply(Ycont[s==i,], 2, median, na.rm = TRUE)
+      #   if(cat_flag){
+      #   mo[i,]=apply(Ycat[s==i,],2,Mode)
+      #   }
+      #   
+      # }
       for (i in unique(s)) {
         
-        mu[i,] <- apply(Ycont[s==i,], 2, median, na.rm = TRUE)
-        if(cat_flag){
-        mo[i,]=apply(Ycat[s==i,],2,Mode)
+        if(sum(s==i)==1){
+          mu[i,] <- Ycont[s==i,]
+          if(cat_flag){
+            mo[i,]=Ycat[s==i,]
+          }
         }
-        
+        else{
+          mu[i,] <- apply(Ycont[s==i,], 2, 
+                          median, na.rm = TRUE)
+          if(cat_flag){
+            mo[i,]=apply(Ycat[s==i,],2,Mode)
+          } 
+        }
       }
       
       mu=data.frame(mu)
