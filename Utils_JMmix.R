@@ -420,27 +420,6 @@ get_cat=function(y,mc,mu,phi){
   
 }
 
-punct=function(x,pNAs,typeNA){
-  
-  # x is a vector (column of the dataset)
-  # pNAs is the percentage of missing values
-  # typeNA is the type of missing values (0 for random, 1 for continuous, all other values will turn into no missing imputation)
-  
-  TT=length(x)
-  pTT=round(TT*pNAs)
-  if(typeNA==0){
-    NAindx=sample(1:TT,pTT,replace = F)
-    x[NAindx]=NA
-  }
-  else if(typeNA==1){
-    NAindx=sample(1:(TT-pTT),1,replace = F)
-    NAindx=seq(NAindx,NAindx+pTT)
-    x[NAindx]=NA
-  }
-  
-  return(x)
-  
-}
 
 Mode <- function(x,na.rm=T) {
   if(na.rm){
