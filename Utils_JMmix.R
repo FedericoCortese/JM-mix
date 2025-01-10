@@ -157,7 +157,7 @@ jump_mixed <- function(Y, n_states, jump_penalty=1e-5,
       
       for (i in unique(s)) {
         
-        mu[i,] <- mu[i,] <- apply(Ycont[s==i,], 2, median, na.rm = TRUE)
+        mu[i,] <- apply(Ycont[s==i,], 2, median, na.rm = TRUE)
         if(cat_flag){
         mo[i,]=apply(Ycat[s==i,],2,Mode)
         }
